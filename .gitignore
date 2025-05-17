@@ -60,8 +60,7 @@ Build/
 # Game builds and archives
 *.zip
 *.rar
-Game build v1.3 win x64*
-game v1 linux ed/
+
 
 # Final ignore cleanup
 *.7z
