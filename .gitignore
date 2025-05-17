@@ -68,4 +68,13 @@ Build/
 *.tar.gz
 *.bak
 *.iso
-
+*.png
+*.jpg
+*.jpeg
+*.psd
+*.tga
+*.bmp
+*.gif
+*.mp3
+*.wav
+*.ogg
