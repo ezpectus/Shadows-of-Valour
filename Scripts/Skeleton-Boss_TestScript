@@ -1,0 +1,280 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Events;
+using System.Threading.Tasks;
+
+
+
+
+
+public class Skeleton : MonoBehaviour
+{
+    #region Public Variables
+    public Transform pointA;
+    public Transform pointB;
+    public Transform rayCast;
+    public LayerMask raycastMask;
+
+    public float patrolSpeed = 2f;
+    public float chaseSpeed = 3.5f;
+    public float detectionRadius = 5f;
+    public float attackDistance = 1.5f;
+    public float attackCooldown = 1f;
+    public int attackDamage = 10;
+
+    public float changeTargetDistance = 0.9f; // Расстояние для смены точки патруля
+
+    public bool isFacingLeft = true; // Если враг смотрит влево по умолчанию
+    #endregion
+
+    #region Private Variables
+    private Animator anim;
+    private Transform target;
+    private Transform currentTarget; // Текущая точка патруля
+    private bool isAttacking;
+    private bool isDead;
+
+    private State currentState = State.Patrolling;
+
+    private enum State
+    {
+        Patrolling,
+        Chasing,
+        Attacking,
+        Dead,
+        Idle
+    }
+    #endregion
+
+    void Awake()
+    {
+        anim = GetComponent<Animator>();
+        currentTarget = pointA; 
+        FaceDirection(isFacingLeft);
+    }
+
+    void Update()
+    {
+        if (isDead) return;
+
+        switch (currentState)
+        {
+            case State.Patrolling:
+                Patrol();
+                break;
+            case State.Chasing:
+                ChasePlayer();
+                break;
+            case State.Attacking:
+                HandleAttack();
+                break;
+            case State.Idle:
+                Idle();
+                break;
+        }
+    }
+
+    private void Patrol()
+    {
+        if (!anim.GetBool("Walk"))
+        {
+            ResetAnimations();
+            anim.SetBool("Walk", true);
+        }
+
+        if (pointA == null || pointB == null)
+        {
+            currentState = State.Idle;
+            return;
+        }
+
+        transform.position = Vector2.MoveTowards(transform.position, currentTarget.position, patrolSpeed * Time.deltaTime);
+
+        if (Vector2.Distance(transform.position, currentTarget.position) <= changeTargetDistance)
+        {
+            currentTarget = (currentTarget == pointA) ? pointB : pointA;
+            Flip();
+            Debug.Log("Changing patrol target to: " + (currentTarget == pointA ? "Point A" : "Point B"));
+        }
+
+        if (CheckForPlayer())
+        {
+            currentState = State.Chasing;
+            anim.SetBool("isChasing", true); // Устанавливаем isChasing в true
+            Debug.Log("Player detected, switching to Chasing state.");
+        }
+    }
+
+    private void ChasePlayer()
+    {
+        ResetAnimations();
+        anim.SetBool("Walk", true);
+
+        if (target == null)
+        {
+            currentState = State.Patrolling;
+            anim.SetBool("isChasing", false); // Устанавливаем isChasing в false
+            Debug.Log("Lost player, switching to Patrolling state.");
+            return;
+        }
+
+        float distanceToPlayer = Vector2.Distance(transform.position, target.position);
+
+        if (distanceToPlayer > detectionRadius)
+        {
+            target = null;
+            currentState = State.Patrolling;
+            anim.SetBool("isChasing", false); // Устанавливаем isChasing в false
+            Debug.Log("Player out of detection range, switching to Patrolling state.");
+            return;
+        }
+
+        if (distanceToPlayer <= attackDistance)
+        {
+            currentState = State.Attacking;
+            anim.SetBool("isChasing", false); // Устанавливаем isChasing в false
+            Debug.Log("Player within attack range, switching to Attacking state.");
+        }
+        else
+        {
+            transform.position = Vector2.MoveTowards(transform.position, new Vector2(target.position.x, transform.position.y), chaseSpeed * Time.deltaTime);
+            FaceTarget(target.position.x);
+        }
+    }
+
+    private void HandleAttack()
+    {
+        if (isAttacking) return;
+
+        isAttacking = true;
+        ResetAnimations();
+        anim.SetTrigger("Attack");
+        Debug.Log("Attacking player.");
+
+        StartCoroutine(PerformAttack());
+    }
+
+    private System.Collections.IEnumerator PerformAttack()
+    {
+        yield return new WaitForSeconds(attackCooldown / 2);
+
+        RaycastHit2D hit = Physics2D.Raycast(rayCast.position, isFacingLeft ? Vector2.left : Vector2.right, attackDistance, raycastMask);
+        if (hit.collider != null)
+        {
+            PlayerHealth playerHealth = hit.collider.GetComponent<PlayerHealth>();
+            if (playerHealth != null)
+            {
+                playerHealth.TakeDamage(attackDamage);
+                Debug.Log("Player hit, dealing " + attackDamage + " damage.");
+            }
+        }
+
+        yield return new WaitForSeconds(attackCooldown / 2);
+        isAttacking = false;
+
+        // Проверяем, если игрок все еще в зоне атаки
+        float distanceToPlayer = target != null ? Vector2.Distance(transform.position, target.position) : float.MaxValue;
+        if (distanceToPlayer > attackDistance)
+        {
+            currentState = State.Chasing;
+            anim.ResetTrigger("Attack");
+            anim.SetBool("Walk", true);
+            anim.SetBool("isChasing", true); // Устанавливаем isChasing в true
+            Debug.Log("Player left attack range, switching to Chasing state.");
+        }
+    }
+
+    private void Idle()
+    {
+        ResetAnimations();
+        anim.SetBool("Idle", true);
+        Debug.Log("Idle state.");
+
+        if (CheckForPlayer())
+        {
+            currentState = State.Chasing;
+            anim.SetBool("isChasing", true); // Устанавливаем isChasing в true
+            Debug.Log("Player detected, switching to Chasing state.");
+        }
+    }
+
+    public void Die()
+    {
+        if (isDead) return;
+
+        isDead = true;
+        currentState = State.Dead;
+
+        anim.SetTrigger("Die");
+
+        GetComponent<Collider2D>().enabled = false;
+        this.enabled = false;
+
+        Destroy(gameObject, 2f);
+        Debug.Log("Enemy died.");
+    }
+
+    private bool CheckForPlayer()
+    {
+        Collider2D player = Physics2D.OverlapCircle(transform.position, detectionRadius, raycastMask);
+        if (player != null)
+        {
+            target = player.transform;
+            return true;
+        }
+
+        if (currentState == State.Chasing || currentState == State.Attacking)
+        {
+            target = null;
+            currentState = State.Patrolling;
+            anim.SetBool("isChasing", false); // Устанавливаем isChasing в false
+            Debug.Log("Player lost, switching to Patrolling state.");
+        }
+        return false;
+    }
+
+    private void Flip()
+    {
+        isFacingLeft = !isFacingLeft;
+        FaceDirection(isFacingLeft);
+        Debug.Log("Flipping. Now " + (isFacingLeft ? "Facing left" : "Facing right"));
+    }
+
+    private void FaceDirection(bool faceLeft)
+    {
+        transform.eulerAngles = new Vector3(0, faceLeft ? 0 : 180, 0);
+    }
+
+    private void FaceTarget(float targetX)
+    {
+        if ((targetX > transform.position.x && isFacingLeft) || (targetX < transform.position.x && !isFacingLeft))
+        {
+            Flip();
+            Debug.Log("Flipping towards player.");
+        }
+    }
+
+    private void ResetAnimations()
+    {
+        anim.ResetTrigger("Attack");
+        anim.SetBool("Walk", false);
+        anim.SetBool("Idle", false);
+    }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, detectionRadius);
+
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(transform.position, attackDistance);
+
+        Gizmos.color = Color.green;
+        if (pointA != null && pointB != null)
+        {
+            Gizmos.DrawLine(pointA.position, pointB.position);
+        }
+    }
+}
+
