@@ -47,14 +47,14 @@ The game combines dynamic battles, thoughtful level design and atmospheric surro
 * **Custom architecture (GameManager, EnemyID, LevelManager)**
 * **Testing: Enemy/Player/Boss FSM, Healing Systems, Procedural Spawning**
 
-##  Status
+## Development Status
 
 ✅ Completed:
 
 * 3 levels
 * Combat systems and AI
-* Saves / downloads
-* Interface and system architecture
+* Save/Loading system 
+* Interface and system architecture with SOLID principles + game optimisation
 
 🛠️ At work:
 
