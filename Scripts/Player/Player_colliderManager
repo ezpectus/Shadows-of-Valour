@@ -1,0 +1,20 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+
+
+
+public class PlayerColliderManager : MonoBehaviour
+{
+    private BoxCollider2D boxCollider;
+
+    void Start()
+    {
+        boxCollider = GetComponent<BoxCollider2D>();
+        if (boxCollider == null)
+        {
+            Debug.LogError("BoxCollider2D не инициализирован. Убедитесь, что компонент BoxCollider2D добавлен к объекту.");
+        }
+    }
+}
