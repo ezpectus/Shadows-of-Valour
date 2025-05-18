@@ -33,8 +33,8 @@ The game combines dynamic battles, thoughtful level design and atmospheric surro
 | Sliding (dash) | Shift + A/D |
 | Light Attack | LKM |
 | Heavy attack | PKM |
-| Hilka | E|
-| Prayer X (near the statue) |
+| Healing colbs | E|
+| Pray on  X (near the statue) |
 
 ---
 
