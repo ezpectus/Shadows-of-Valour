@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-
-
 public class PlayerColliderManager : MonoBehaviour
 {
     private BoxCollider2D boxCollider;
