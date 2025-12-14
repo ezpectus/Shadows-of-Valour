@@ -6,8 +6,6 @@ using System.Threading.Tasks;
 
 
 
-
-
 public class Skeleton : MonoBehaviour
 {
     #region Public Variables
