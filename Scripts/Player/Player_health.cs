@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 
 
-
 public class PlayerHealth : MonoBehaviour, IHealth
 {
     [SerializeField] private int maxHealth = 100;
